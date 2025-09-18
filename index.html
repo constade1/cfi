@@ -7,8 +7,8 @@
   <style>
     :root{
       --fg:#111; --muted:#4b5563; --border:#cbd5e1; --card:#fff; --bg:#f7f7f8; --accent:#0a66c2;
-      --radius:12px;
-      --print-zoom: 0.90; /* ↓ tweak to force single page if needed: 0.85–0.95 */
+      --radius:12px; --print-zoom:0.90;
+      --success-fg:#165c2f; --success-border:#b7e2c6;
     }
     @media (prefers-color-scheme: dark){
       :root{ --fg:#eee; --muted:#a3a3a3; --border:#2b2f3a; --card:#12141a; --bg:#0b0c0f; }
@@ -17,22 +17,25 @@
     html, body { height:100%; background:var(--bg); color:var(--fg); -webkit-text-size-adjust:100%; overscroll-behavior: contain; }
     body { margin:0; font-family:-apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif; line-height:1.25; }
 
-    /* Screen layout */
     .page { max-width:900px; margin:20px auto; background:var(--card); border:1px solid var(--border); border-radius: var(--radius); overflow:hidden; }
     .pad { padding:12px 16px; }
+
+    /* Centered brand & title */
     .brand { text-align:center; padding-top:6px; }
-    .brand h1 { font: 700 18px/1.1 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif; margin:6px 0 0; }
+    .brand .logo { font-weight:800; font-size:18px }
+    .brand .logo span { font-weight:600; }
+    .brand h1 { text-align:center; font:700 20px/1.15 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif; margin:8px 0 0; }
 
     .row { display:grid; grid-template-columns: 2fr 1.2fr 1fr; gap:12px; align-items:end; }
     @media (max-width: 720px){ .row{ grid-template-columns: 1fr; } }
 
     label { font-size:13px; color:var(--muted); display:block; margin:2px 0 6px; }
     input[type="text"], input[type="date"], textarea {
-      width:100%; font-size:16px; /* prevents iOS zoom */
+      width:100%; font-size:16px;
       border:1px solid var(--border); border-radius:10px; padding:8px 9px;
       background:var(--card); color:var(--fg); box-sizing:border-box;
     }
-    textarea { min-height:64px; resize:vertical; } /* smaller text boxes */
+    textarea { min-height:64px; resize:vertical; }
 
     .readonly-pill {
       border:1px dashed var(--border); border-radius:10px; padding:8px 9px; font-size:16px; background:#fafafa;
@@ -41,7 +44,7 @@
     .section-title { font-weight:700; margin:10px 0 6px; }
     .box { border:1px solid var(--border); border-radius:10px; padding:8px; }
 
-    /* Area of Violation: single line */
+    /* Area of Violation: inline row */
     .checks-inline { display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
     .checks-inline label { display:flex; gap:8px; align-items:center; color:var(--fg); font-size:16px; margin:4px 0 0; }
 
@@ -49,18 +52,13 @@
     @media (max-width: 720px){ .sig-grid{ grid-template-columns: 1fr; } }
 
     .sig-card { border:1px solid var(--border); border-radius:10px; padding:10px; }
-    .sig-card h3 { margin:0 0 6px 0; font-size:16px; }
+    .sig-card h3 { margin:0 0 6px 0; font-size:16px; text-align:left; }
 
     .sig-card canvas {
-      width:100%; height:140px;             /* visible CSS size */
-      border:1px dashed #9aa0a6; border-radius:8px;
-      background:transparent;
-      touch-action: none;                    /* block browser gestures */
-      -ms-touch-action: none;
-      -webkit-user-select: none; user-select: none;
-      -webkit-touch-callout: none;
-      position: relative; z-index: 1;
-      display:block;
+      width:100%; height:140px;
+      border:1px dashed #9aa0a6; border-radius:8px; background:transparent;
+      touch-action:none; -ms-touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+      position:relative; z-index:1; display:block;
     }
 
     .sig-actions { display:flex; gap:10px; margin:6px 0 8px; }
@@ -70,27 +68,47 @@
     button { font-size:16px; padding:8px 12px; border-radius:10px; border:1px solid var(--border); background:#eef2ff; color:#1f2937; cursor:pointer; }
     .primary { background:var(--accent); color:#fff; border-color:transparent; }
 
-    .ok, .err { display:none; margin-top:8px; padding:10px; border-radius:8px; font-size:14px; }
-    .ok  { background:#e6f7ed; color:#165c2f; border:1px solid #b7e2c6; }
-    .err { background:#fdecea; color:#611a15; border:1px solid #f5c6cb; }
+    .err { display:none; margin-top:8px; padding:10px; border-radius:8px; font-size:14px; background:#fdecea; color:#611a15; border:1px solid #f5c6cb; }
 
-    /* Print: Letter 8.5"x11" — compact & zoom to fit */
+    /* Success overlay (no SharePoint link) */
+    .overlay{ position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.45); z-index:9999; }
+    .overlay.show{ display:grid; }
+    .success-card{
+      background:var(--card); color:var(--success-fg); border:1px solid var(--success-border);
+      border-radius:16px; padding:20px 24px; text-align:center; min-width:260px; max-width:92vw;
+      box-shadow:0 10px 30px rgba(0,0,0,.15); animation:pop .28s ease-out;
+    }
+    @keyframes pop{ from{ transform:scale(.9); opacity:0 } to{ transform:scale(1); opacity:1 } }
+
+    .check-wrap{ width:96px; height:96px; margin:6px auto 10px; }
+    .check-wrap svg{ width:100%; height:100%; display:block; }
+    .draw-circle{ stroke-dasharray: 300; stroke-dashoffset: 300; animation: draw 700ms ease-out forwards; }
+    .draw-check{ stroke-dasharray: 100; stroke-dashoffset: 100; animation: draw 500ms ease-out forwards 200ms; }
+    @keyframes draw{ to { stroke-dashoffset: 0; } }
+
+    .closebtn{
+      margin-top:12px; display:inline-flex; align-items:center; justify-content:center;
+      font-size:15px; padding:8px 12px; border-radius:10px; border:1px solid var(--border);
+      background:#eff6ff; color:#0b3b85; cursor:pointer;
+    }
+
+    /* Print: Letter 8.5"x11" */
     @media print{
       body{ background:white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       @page { size: Letter; margin: 0.5in; }
-      html, body { zoom: var(--print-zoom); }     /* reliable in WebKit/Edge(iOS) */
+      html, body { zoom: var(--print-zoom); }
       .page{ width: calc(8.5in - 1in); margin: 0 auto; border:0; border-radius:0; }
-      .brand h1{ font-size:16px; }
-      .brand div{ font-size:16px; }
+      .brand h1{ font-size:18px; }
+      .brand .logo{ font-size:16px; }
       .pad{ padding:8px 10px; }
       .row{ gap:8px; }
       label{ font-size:11px; }
       input[type="text"], input[type="date"], textarea{ font-size:12px; padding:6px 7px; }
       .section-title{ margin:6px 0 4px; }
       .box{ padding:6px; }
-      .sig-card canvas{ height:110px; } /* smaller on print to ensure one page */
+      .sig-card canvas{ height:110px; }
       .checks-inline label{ font-size:12px; }
-      .toolbar{ display:none !important; }
+      .toolbar, .overlay{ display:none !important; }
     }
   </style>
 </head>
@@ -98,12 +116,11 @@
 
   <form id="cfi" class="page" novalidate>
     <div class="brand pad">
-      <div style="font-weight:800; font-size:18px">Campbell’s <span style="font-weight:600">SNACKS</span></div>
+      <div class="logo">Campbell’s <span>SNACKS</span></div>
       <h1>Coaching for Improvement Document</h1>
     </div>
 
     <div class="pad">
-      <!-- Top row: Employee Name | Location (read-only) | Date -->
       <div class="row">
         <div>
           <label>Employee Name</label>
@@ -151,9 +168,7 @@
         <textarea id="comments" name="comments"></textarea>
       </div>
 
-      <!-- Signatures side-by-side -->
       <div class="sig-grid">
-        <!-- Employee -->
         <div class="sig-card">
           <h3>Employee Signature</h3>
           <canvas id="sigEmp"></canvas>
@@ -172,7 +187,6 @@
           </div>
         </div>
 
-        <!-- Supervisor -->
         <div class="sig-card">
           <h3>Supervisor Signature</h3>
           <canvas id="sigSup"></canvas>
@@ -192,36 +206,42 @@
         </div>
       </div>
 
-      <div id="ok" class="ok">Submitted! Your PDF will be saved to SharePoint.</div>
       <div id="err" class="err">Something went wrong. Please try again.</div>
     </div>
 
     <div class="toolbar">
       <button type="button" id="printBtn">Print / Save PDF</button>
-      <button type="submit" class="primary">Submit</button>
+      <button type="submit" class="primary" id="submitBtn">Submit</button>
     </div>
 
-    <!-- Hidden fields for signature images -->
     <input type="hidden" id="sigEmpData" name="sigEmpData">
     <input type="hidden" id="sigSupData" name="sigSupData">
   </form>
 
+  <!-- Success overlay (no SharePoint link) -->
+  <div id="successOverlay" class="overlay" aria-modal="true" role="dialog">
+    <div class="success-card" role="document" onclick="event.stopPropagation()">
+      <div class="check-wrap" aria-hidden="true">
+        <svg viewBox="0 0 120 120">
+          <circle class="draw-circle" cx="60" cy="60" r="48" fill="none" stroke="#22c55e" stroke-width="8" />
+          <path class="draw-check" d="M36 64 L54 78 L86 42" fill="none" stroke="#16a34a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div style="font-weight:700; font-size:18px; color:#14532d">Submitted!</div>
+      <div style="margin-top:6px;color:#14532d">Your report was saved.</div>
+      <button type="button" class="closebtn" id="closeOverlay">Close</button>
+    </div>
+  </div>
+
   <script>
-    /* ==== Replace with your Flow URL ==== */
-    const FLOW_URL = "https://defaulta0a180f0657a438b891f49417a6dd8.bc.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/0d1fb5e1ec1c4f4b83da2eb6074fb72c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=vLQMDKpnjabByDyPSdGecNMyfCtDKcTqA7GW3tuWu9Y";
+    const FLOW_URL = "FLOW_URL_HERE";
     const LOCATION_TEXT = "Indy Mixing Center";
 
-    /* ==== Native pointer-event signature pads (Edge/Safari on iPad) ==== */
+    /* ==== pointer-event signature pads ==== */
     function initSignatureCanvas(canvas){
       const ctx = canvas.getContext('2d');
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 2.0;
-
-      let drawing = false;
-      let prev = null;
-      let isEmpty = true;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2.0;
+      let drawing=false, prev=null, isEmpty=true;
 
       function fit(){
         const ratio = Math.max(window.devicePixelRatio || 1, 1);
@@ -229,91 +249,81 @@
         canvas.width  = Math.max(1, Math.floor(rect.width  * ratio));
         canvas.height = Math.max(1, Math.floor(rect.height * ratio));
         ctx.setTransform(ratio,0,0,ratio,0,0);
-        // style after reset
-        ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2.0;
+        ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#000'; ctx.lineWidth=2.0;
       }
-
-      function pos(e){
-        const r = canvas.getBoundingClientRect();
-        return { x: e.clientX - r.left, y: e.clientY - r.top };
-      }
+      function pos(e){ const r=canvas.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
 
       canvas.addEventListener('pointerdown', e=>{
-        // Allow touch/pen; only block non-left mouse clicks
-        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        // allow touch/pen; only block non-left mouse button
+        if (e.pointerType==='mouse' && e.button!==0) return;
         canvas.setPointerCapture?.(e.pointerId);
-        drawing = true;
-        prev = pos(e);
-        isEmpty = false;
-        e.preventDefault();
+        drawing=true; prev=pos(e); isEmpty=false; e.preventDefault();
       }, {passive:false});
-
       canvas.addEventListener('pointermove', e=>{
-        if (!drawing) return;
-        const p = pos(e);
-        ctx.beginPath();
-        ctx.moveTo(prev.x, prev.y);
-        ctx.lineTo(p.x, p.y);
-        ctx.stroke();
-        prev = p;
-        e.preventDefault();
+        if(!drawing) return;
+        const p=pos(e); ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(p.x,p.y); ctx.stroke(); prev=p; e.preventDefault();
       }, {passive:false});
-
-      function end(e){
-        drawing = false;
-        prev = null;
-        canvas.releasePointerCapture?.(e.pointerId);
-        e.preventDefault();
-      }
+      function end(e){ drawing=false; prev=null; canvas.releasePointerCapture?.(e.pointerId); e.preventDefault(); }
       canvas.addEventListener('pointerup', end, {passive:false});
       canvas.addEventListener('pointercancel', end, {passive:false});
       canvas.addEventListener('pointerleave', end, {passive:false});
 
-      // Prevent scroll/zoom gestures while drawing
+      // prevent scroll while drawing on iPad
       const block = ev => ev.preventDefault();
       canvas.addEventListener('touchstart', block, {passive:false});
       canvas.addEventListener('touchmove',  block, {passive:false});
 
-      new ResizeObserver(()=> requestAnimationFrame(fit)).observe(canvas.parentElement);
-      window.addEventListener('orientationchange', ()=> setTimeout(fit, 150));
+      new ResizeObserver(()=>requestAnimationFrame(fit)).observe(canvas.parentElement);
+      addEventListener('orientationchange', ()=>setTimeout(fit,150));
       requestAnimationFrame(fit);
 
-      return {
-        clear(){ ctx.clearRect(0,0,canvas.width,canvas.height); isEmpty=true; },
-        toDataURL(){ return canvas.toDataURL('image/png'); },
-        isEmpty(){ return isEmpty; }
-      };
+      return { clear(){ ctx.clearRect(0,0,canvas.width,canvas.height); isEmpty=true; },
+               toDataURL(){ return canvas.toDataURL('image/png'); },
+               isEmpty(){ return isEmpty; } };
     }
 
     const empPad = initSignatureCanvas(document.getElementById('sigEmp'));
     const supPad = initSignatureCanvas(document.getElementById('sigSup'));
 
-    // Clear buttons
     document.querySelectorAll('[data-clear]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
-        (btn.getAttribute('data-clear') === 'sigEmp' ? empPad : supPad).clear();
+        (btn.getAttribute('data-clear')==='sigEmp'?empPad:supPad).clear();
       });
     });
 
-    // Local print
-    document.getElementById('printBtn').addEventListener('click', ()=>{
-      storeSigs();
-      window.print();
-    });
+    document.getElementById('printBtn').addEventListener('click', ()=>{ storeSigs(); window.print(); });
 
     function storeSigs(){
       document.getElementById('sigEmpData').value = empPad.isEmpty() ? "" : empPad.toDataURL();
       document.getElementById('sigSupData').value = supPad.isEmpty() ? "" : supPad.toDataURL();
     }
 
-    // Submit → POST JSON to Flow
+    function clearFormUI(){
+      const form=document.getElementById('cfi');
+      form.reset();
+      empPad.clear(); supPad.clear();
+      document.getElementById('sigEmpData').value = '';
+      document.getElementById('sigSupData').value = '';
+    }
+
+    function showSuccess(){
+      const overlay=document.getElementById('successOverlay');
+      overlay.classList.add('show');
+      // auto-hide after 2.2s as well
+      const t = setTimeout(()=>overlay.classList.remove('show'), 2200);
+      // allow manual close
+      document.getElementById('closeOverlay').onclick = ()=>{ clearTimeout(t); overlay.classList.remove('show'); };
+      overlay.onclick = ()=>{ clearTimeout(t); overlay.classList.remove('show'); };
+    }
+
     const form = document.getElementById('cfi');
-    const ok   = document.getElementById('ok');
     const err  = document.getElementById('err');
+    const submitBtn = document.getElementById('submitBtn');
 
     form.addEventListener('submit', async (e)=>{
       e.preventDefault();
-      ok.style.display='none'; err.style.display='none';
+      err.style.display='none';
+      submitBtn.disabled = true;
 
       storeSigs();
 
@@ -339,14 +349,14 @@
         supSigDate: document.getElementById('supSigDate').value || ""
       };
 
-      // Compact, print-ready HTML (kept within one Letter page)
+      // Print-friendly HTML for your Flow conversion
       const check = (b)=> b ? "☑" : "☐";
       body.html = `
 <!doctype html>
 <html><head><meta charset="utf-8">
 <style>
   body{font-family:Arial, sans-serif; margin:28px;}
-  h1{margin:0 0 6px 0}
+  h1{margin:0 0 6px 0; text-align:center}
   .grid3{display:grid; grid-template-columns: 2fr 1.2fr 1fr; gap:8px}
   .row{margin:4px 0}
   .label{font-weight:bold; display:inline-block; width:200px}
@@ -366,10 +376,10 @@
 
   <div class="row" style="margin-top:6px"><b>Incident Description</b></div>
   <div class="row">Describe Incident (date, time, location, action):</div>
-  <div class="box">${esc(body.incident).replace(/\\n/g,"<br>")}</div>
+  <div class="box">${esc(body.incident).replace(/\n/g,"<br>")}</div>
 
   <div class="row" style="margin-top:6px"><b>What policy, procedure or standard was not followed?</b></div>
-  <div class="box">${esc(body.policy).replace(/\\n/g,"<br>")}</div>
+  <div class="box">${esc(body.policy).replace(/\n/g,"<br>")}</div>
 
   <div class="row" style="margin-top:6px"><b>Action Taken - Coaching for Improvement</b></div>
   <div class="row" style="text-decoration:underline">Area of Violation</div>
@@ -381,10 +391,10 @@
   </div>
 
   <div class="row" style="margin-top:6px"><b>Expectations going forward</b></div>
-  <div class="box">${esc(body.expectations).replace(/\\n/g,"<br>")}</div>
+  <div class="box">${esc(body.expectations).replace(/\n/g,"<br>")}</div>
 
   <div class="row" style="margin-top:6px"><b>Employee Comments</b></div>
-  <div class="box">${esc(body.comments).replace(/\\n/g,"<br>")}</div>
+  <div class="box">${esc(body.comments).replace(/\n/g,"<br>")}</div>
 
   <div class="grid2" style="margin-top:8px">
     <div>
@@ -409,10 +419,13 @@
           body: JSON.stringify(body)
         });
         if(!resp.ok) throw new Error(await resp.text());
-        ok.style.display='block';
+        showSuccess();
+        clearFormUI();
       }catch(e2){
         err.textContent = "Error submitting: " + (e2.message || e2);
         err.style.display='block';
+      } finally {
+        submitBtn.disabled = false;
       }
     });
 
