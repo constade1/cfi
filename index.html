@@ -20,11 +20,10 @@
     .page { max-width:900px; margin:20px auto; background:var(--card); border:1px solid var(--border); border-radius: var(--radius); overflow:hidden; }
     .pad { padding:12px 16px; }
 
-    /* Centered brand & title */
+    /* Brand + centered title */
     .brand { text-align:center; padding-top:6px; }
-    .brand .logo { font-weight:800; font-size:18px }
-    .brand .logo span { font-weight:600; }
-    .brand h1 { text-align:center; font:700 20px/1.15 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif; margin:8px 0 0; }
+    .brand img { height:44px; width:auto; display:block; margin:6px auto 4px; }
+    .brand h1 { text-align:center; font:700 20px/1.15 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif; margin:6px 0 0; }
 
     .row { display:grid; grid-template-columns: 2fr 1.2fr 1fr; gap:12px; align-items:end; }
     @media (max-width: 720px){ .row{ grid-template-columns: 1fr; } }
@@ -70,7 +69,7 @@
 
     .err { display:none; margin-top:8px; padding:10px; border-radius:8px; font-size:14px; background:#fdecea; color:#611a15; border:1px solid #f5c6cb; }
 
-    /* Success overlay (no SharePoint link) */
+    /* Success overlay (shows immediately, stays until Close) */
     .overlay{ position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.45); z-index:9999; }
     .overlay.show{ display:grid; }
     .success-card{
@@ -99,7 +98,6 @@
       html, body { zoom: var(--print-zoom); }
       .page{ width: calc(8.5in - 1in); margin: 0 auto; border:0; border-radius:0; }
       .brand h1{ font-size:18px; }
-      .brand .logo{ font-size:16px; }
       .pad{ padding:8px 10px; }
       .row{ gap:8px; }
       label{ font-size:11px; }
@@ -116,7 +114,8 @@
 
   <form id="cfi" class="page" novalidate>
     <div class="brand pad">
-      <div class="logo">Campbell’s <span>SNACKS</span></div>
+      <!-- Your logo file is next to index.html -->
+      <img src="./logo.png" alt="Campbell’s Snacks logo">
       <h1>Coaching for Improvement Document</h1>
     </div>
 
@@ -218,17 +217,16 @@
     <input type="hidden" id="sigSupData" name="sigSupData">
   </form>
 
-  <!-- Success overlay (no SharePoint link) -->
+  <!-- Success overlay (shows immediately, stays until Close) -->
   <div id="successOverlay" class="overlay" aria-modal="true" role="dialog">
     <div class="success-card" role="document" onclick="event.stopPropagation()">
-      <div class="check-wrap" aria-hidden="true">
+      <div class="check-wrap" aria-hidden="true" id="checkWrap">
         <svg viewBox="0 0 120 120">
           <circle class="draw-circle" cx="60" cy="60" r="48" fill="none" stroke="#22c55e" stroke-width="8" />
           <path class="draw-check" d="M36 64 L54 78 L86 42" fill="none" stroke="#16a34a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
-      <div style="font-weight:700; font-size:18px; color:#14532d">Submitted!</div>
-      <div style="margin-top:6px;color:#14532d">Your report was saved.</div>
+      <div id="successMsg" style="font-weight:700; font-size:18px; color:#14532d">Submitting…</div>
       <button type="button" class="closebtn" id="closeOverlay">Close</button>
     </div>
   </div>
@@ -254,7 +252,6 @@
       function pos(e){ const r=canvas.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
 
       canvas.addEventListener('pointerdown', e=>{
-        // allow touch/pen; only block non-left mouse button
         if (e.pointerType==='mouse' && e.button!==0) return;
         canvas.setPointerCapture?.(e.pointerId);
         drawing=true; prev=pos(e); isEmpty=false; e.preventDefault();
@@ -268,7 +265,6 @@
       canvas.addEventListener('pointercancel', end, {passive:false});
       canvas.addEventListener('pointerleave', end, {passive:false});
 
-      // prevent scroll while drawing on iPad
       const block = ev => ev.preventDefault();
       canvas.addEventListener('touchstart', block, {passive:false});
       canvas.addEventListener('touchmove',  block, {passive:false});
@@ -306,15 +302,26 @@
       document.getElementById('sigSupData').value = '';
     }
 
-    function showSuccess(){
-      const overlay=document.getElementById('successOverlay');
-      overlay.classList.add('show');
-      // auto-hide after 2.2s as well
-      const t = setTimeout(()=>overlay.classList.remove('show'), 2200);
-      // allow manual close
-      document.getElementById('closeOverlay').onclick = ()=>{ clearTimeout(t); overlay.classList.remove('show'); };
-      overlay.onclick = ()=>{ clearTimeout(t); overlay.classList.remove('show'); };
+    // Success overlay control (show immediately; stays until Close)
+    const overlay = document.getElementById('successOverlay');
+    const successMsgEl = document.getElementById('successMsg');
+    const closeBtn = document.getElementById('closeOverlay');
+    const checkWrap = document.getElementById('checkWrap');
+
+    function restartCheckAnimation(){
+      const svg = checkWrap.querySelector('svg');
+      const clone = svg.cloneNode(true);
+      svg.replaceWith(clone);
     }
+    function showOverlay(initialText){
+      successMsgEl.textContent = initialText || 'Submitting…';
+      restartCheckAnimation();          // start the check animation NOW
+      overlay.classList.add('show');    // show immediately
+    }
+    function setOverlayText(t){ successMsgEl.textContent = t; }
+    function hideOverlay(){ overlay.classList.remove('show'); }
+    closeBtn.onclick = () => hideOverlay();
+    // (overlay click does NOT close; require the Close button)
 
     const form = document.getElementById('cfi');
     const err  = document.getElementById('err');
@@ -324,6 +331,9 @@
       e.preventDefault();
       err.style.display='none';
       submitBtn.disabled = true;
+
+      // show overlay + animated check immediately
+      showOverlay('Submitting…');
 
       storeSigs();
 
@@ -349,7 +359,7 @@
         supSigDate: document.getElementById('supSigDate').value || ""
       };
 
-      // Print-friendly HTML for your Flow conversion
+      // Print-friendly HTML (for your Flow’s PDF conversion)
       const check = (b)=> b ? "☑" : "☐";
       body.html = `
 <!doctype html>
@@ -365,7 +375,7 @@
   .grid2{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
   @page{ size: Letter; margin: .5in }
 </style></head><body>
-  <div style="text-align:center;font-weight:800;font-size:18px">Campbell’s <span style="font-weight:600">SNACKS</span></div>
+  <div style="text-align:center"><img src="./logo.png" alt="Campbell’s Snacks" style="height:40px"></div>
   <h1>Coaching for Improvement Document</h1>
 
   <div class="grid3">
@@ -419,9 +429,13 @@
           body: JSON.stringify(body)
         });
         if(!resp.ok) throw new Error(await resp.text());
-        showSuccess();
+
+        // success: update text, clear form; overlay stays until Close is clicked
+        setOverlayText('Submitted!');
         clearFormUI();
       }catch(e2){
+        // failure: hide overlay and show the inline error
+        hideOverlay();
         err.textContent = "Error submitting: " + (e2.message || e2);
         err.style.display='block';
       } finally {
