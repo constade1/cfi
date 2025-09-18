@@ -13,7 +13,6 @@
     @media (prefers-color-scheme: dark){
       :root{ --fg:#eee; --muted:#a3a3a3; --border:#2b2f3a; --card:#12141a; --bg:#0b0c0f; }
     }
-
     html, body { height:100%; background:var(--bg); color:var(--fg); -webkit-text-size-adjust:100%; overscroll-behavior: contain; }
     body { margin:0; font-family:-apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif; line-height:1.25; }
 
@@ -30,16 +29,12 @@
 
     label { font-size:13px; color:var(--muted); display:block; margin:2px 0 6px; }
     input[type="text"], input[type="date"], textarea {
-      width:100%; font-size:16px;
-      border:1px solid var(--border); border-radius:10px; padding:8px 9px;
+      width:100%; font-size:16px; border:1px solid var(--border); border-radius:10px; padding:8px 9px;
       background:var(--card); color:var(--fg); box-sizing:border-box;
     }
     textarea { min-height:64px; resize:vertical; }
 
-    .readonly-pill {
-      border:1px dashed var(--border); border-radius:10px; padding:8px 9px; font-size:16px; background:#fafafa;
-    }
-
+    .readonly-pill { border:1px dashed var(--border); border-radius:10px; padding:8px 9px; font-size:16px; background:#fafafa; }
     .section-title { font-weight:700; margin:10px 0 6px; }
     .box { border:1px solid var(--border); border-radius:10px; padding:8px; }
 
@@ -54,8 +49,7 @@
     .sig-card h3 { margin:0 0 6px 0; font-size:16px; text-align:left; }
 
     .sig-card canvas {
-      width:100%; height:140px;
-      border:1px dashed #9aa0a6; border-radius:8px; background:transparent;
+      width:100%; height:140px; border:1px dashed #9aa0a6; border-radius:8px; background:transparent;
       touch-action:none; -ms-touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
       position:relative; z-index:1; display:block;
     }
@@ -78,7 +72,6 @@
       box-shadow:0 10px 30px rgba(0,0,0,.15); animation:pop .28s ease-out;
     }
     @keyframes pop{ from{ transform:scale(.9); opacity:0 } to{ transform:scale(1); opacity:1 } }
-
     .check-wrap{ width:96px; height:96px; margin:6px auto 10px; }
     .check-wrap svg{ width:100%; height:100%; display:block; }
     .draw-circle{ stroke-dasharray: 300; stroke-dashoffset: 300; animation: draw 700ms ease-out forwards; }
@@ -114,8 +107,8 @@
 
   <form id="cfi" class="page" novalidate>
     <div class="brand pad">
-      <!-- Your logo file is next to index.html -->
-      <img src="./logo.png" alt="Campbell’s Snacks logo">
+      <!-- The script will set this src to a data-URI built from ./logo.png -->
+      <img id="brandLogo" alt="Campbell’s Snacks logo" />
       <h1>Coaching for Improvement Document</h1>
     </div>
 
@@ -217,7 +210,7 @@
     <input type="hidden" id="sigSupData" name="sigSupData">
   </form>
 
-  <!-- Success overlay (shows immediately, stays until Close) -->
+  <!-- Success overlay -->
   <div id="successOverlay" class="overlay" aria-modal="true" role="dialog">
     <div class="success-card" role="document" onclick="event.stopPropagation()">
       <div class="check-wrap" aria-hidden="true" id="checkWrap">
@@ -234,6 +227,26 @@
   <script>
     const FLOW_URL = "https://defaulta0a180f0657a438b891f49417a6dd8.bc.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/0d1fb5e1ec1c4f4b83da2eb6074fb72c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=vLQMDKpnjabByDyPSdGecNMyfCtDKcTqA7GW3tuWu9Y";
     const LOCATION_TEXT = "Indy Mixing Center";
+
+    // Load ./logo.png and convert to data URI so both the page and the PDF can show it reliably
+    let LOGO_DATA_URI = "";
+    window.addEventListener('load', async () => {
+      try {
+        const res = await fetch('./logo.png', { cache: 'no-store' });
+        if (!res.ok) throw new Error('logo not found');
+        const blob = await res.blob();
+        LOGO_DATA_URI = await new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(r.result);
+          r.onerror = reject;
+          r.readAsDataURL(blob);
+        });
+        document.getElementById('brandLogo').src = LOGO_DATA_URI;
+      } catch (e) {
+        // Fallback to direct path if conversion failed (will still show if the path is correct)
+        document.getElementById('brandLogo').src = './logo.png';
+      }
+    });
 
     /* ==== pointer-event signature pads ==== */
     function initSignatureCanvas(canvas){
@@ -321,7 +334,6 @@
     function setOverlayText(t){ successMsgEl.textContent = t; }
     function hideOverlay(){ overlay.classList.remove('show'); }
     closeBtn.onclick = () => hideOverlay();
-    // (overlay click does NOT close; require the Close button)
 
     const form = document.getElementById('cfi');
     const err  = document.getElementById('err');
@@ -340,7 +352,7 @@
       const body = {
         employeeName: document.getElementById('empName').value || "",
         date: document.getElementById('date').value || "",
-        location: LOCATION_TEXT,
+        location: "Indy Mixing Center",
         incident: document.getElementById('incident').value || "",
         policy: document.getElementById('policy').value || "",
         expectations: document.getElementById('expectations').value || "",
@@ -359,8 +371,12 @@
         supSigDate: document.getElementById('supSigDate').value || ""
       };
 
-      // Print-friendly HTML (for your Flow’s PDF conversion)
+      // Build print-friendly HTML for Flow; embed the logo via data URI if available
       const check = (b)=> b ? "☑" : "☐";
+      const logoTag = LOGO_DATA_URI
+        ? '<img src="'+LOGO_DATA_URI+'" alt="Campbell’s Snacks" style="height:40px">'
+        : '<img src="./logo.png" alt="Campbell’s Snacks" style="height:40px">';
+
       body.html = `
 <!doctype html>
 <html><head><meta charset="utf-8">
@@ -375,7 +391,7 @@
   .grid2{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
   @page{ size: Letter; margin: .5in }
 </style></head><body>
-  <div style="text-align:center"><img src="./logo.png" alt="Campbell’s Snacks" style="height:40px"></div>
+  <div style="text-align:center">${logoTag}</div>
   <h1>Coaching for Improvement Document</h1>
 
   <div class="grid3">
@@ -434,7 +450,6 @@
         setOverlayText('Submitted!');
         clearFormUI();
       }catch(e2){
-        // failure: hide overlay and show the inline error
         hideOverlay();
         err.textContent = "Error submitting: " + (e2.message || e2);
         err.style.display='block';
