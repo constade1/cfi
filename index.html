@@ -9,8 +9,7 @@
       --fg:#111; --muted:#4b5563; --border:#cbd5e1; --card:#fff; --bg:#f7f7f8; --accent:#0a66c2;
       --radius:12px; --print-zoom:0.90;
       --success-fg:#165c2f; --success-border:#b7e2c6;
-      /* NEW: control logo height (increase if needed) */
-      --logo-h: 100px;
+      --logo-h: 100px; /* adjust for more/less logo space */
     }
     @media (prefers-color-scheme: dark){
       :root{ --fg:#eee; --muted:#a3a3a3; --border:#2b2f3a; --card:#12141a; --bg:#0b0c0f; }
@@ -21,7 +20,7 @@
     .page { max-width:900px; margin:20px auto; background:var(--card); border:1px solid var(--border); border-radius: var(--radius); overflow:hidden; }
     .pad { padding:12px 16px; }
 
-    /* Brand + centered title (UPDATED spacing for logo) */
+    /* Brand + centered title with extra space for logo */
     .brand { text-align:center; padding:16px 16px 8px; min-height: calc(var(--logo-h) + 40px); }
     .brand img { max-height: var(--logo-h); width:auto; display:block; margin:8px auto 10px; }
     .brand h1 { text-align:center; font:700 20px/1.15 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif; margin:6px 0 0; }
@@ -109,8 +108,9 @@
 
   <form id="cfi" class="page" novalidate>
     <div class="brand pad">
-      <!-- Set a default src so the logo shows immediately; script will upgrade to data-URI -->
-      <img id="brandLogo" src="./logo.png" alt="Campbell’s Snacks logo" />
+      <!-- INLINE (base64) LOGO — always shows; no file paths needed -->
+      <img id="brandLogo" alt="Campbell’s Snacks logo"
+           src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...<snip>..."/>
       <h1>Coaching for Improvement Document</h1>
     </div>
 
@@ -229,26 +229,6 @@
   <script>
     const FLOW_URL = "https://defaulta0a180f0657a438b891f49417a6dd8.bc.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/0d1fb5e1ec1c4f4b83da2eb6074fb72c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=vLQMDKpnjabByDyPSdGecNMyfCtDKcTqA7GW3tuWu9Y";
     const LOCATION_TEXT = "Indy Mixing Center";
-
-    // Load ./logo.png and convert to data URI so both the page and the PDF can show it reliably
-    let LOGO_DATA_URI = "";
-    window.addEventListener('load', async () => {
-      try {
-        const res = await fetch(document.getElementById('brandLogo').getAttribute('src') || './logo.png', { cache: 'no-store' });
-        if (!res.ok) throw new Error('logo not found');
-        const blob = await res.blob();
-        LOGO_DATA_URI = await new Promise((resolve, reject) => {
-          const r = new FileReader();
-          r.onload = () => resolve(r.result);
-          r.onerror = reject;
-          r.readAsDataURL(blob);
-        });
-        document.getElementById('brandLogo').src = LOGO_DATA_URI;
-      } catch (e) {
-        // Fallback to direct path if conversion failed (will still show if the path is correct)
-        document.getElementById('brandLogo').src = './logo.png';
-      }
-    });
 
     /* ==== pointer-event signature pads ==== */
     function initSignatureCanvas(canvas){
@@ -373,11 +353,10 @@
         supSigDate: document.getElementById('supSigDate').value || ""
       };
 
-      // Build print-friendly HTML for Flow; embed the logo via data URI if available
+      // Build print-friendly HTML for Flow; reuse the same inline <img> src (base64)
       const check = (b)=> b ? "☑" : "☐";
-      const logoTag = LOGO_DATA_URI
-        ? '<img src="'+LOGO_DATA_URI+'" alt="Campbell’s Snacks" style="height:40px">'
-        : '<img src="./logo.png" alt="Campbell’s Snacks" style="height:40px">';
+      const logoSrc = document.getElementById('brandLogo').src;
+      const logoTag = '<img src="'+logoSrc+'" alt="Campbell’s Snacks" style="height:40px">';
 
       body.html = `
 <!doctype html>
@@ -448,7 +427,6 @@
         });
         if(!resp.ok) throw new Error(await resp.text());
 
-        // success: update text, clear form; overlay stays until Close is clicked
         setOverlayText('Submitted!');
         clearFormUI();
       }catch(e2){
