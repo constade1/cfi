@@ -108,9 +108,12 @@
 
   <form id="cfi" class="page" novalidate>
     <div class="brand pad">
-      <!-- INLINE (base64) LOGO — always shows; no file paths needed -->
-      <img id="brandLogo" alt="Campbell’s Snacks logo"
-           src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...<snip>..."/>
+      <!-- SAME INTERNET LOGO AS THE CHECK-IN PAGE -->
+      <img id="brandLogo"
+           src="https://srclm.com/wp-content/uploads/2020/10/CAMPBELL_SNACKS-Logo.png"
+           alt="Campbell’s Snacks logo"
+           decoding="async"
+           loading="eager">
       <h1>Coaching for Improvement Document</h1>
     </div>
 
@@ -230,7 +233,7 @@
     const FLOW_URL = "https://defaulta0a180f0657a438b891f49417a6dd8.bc.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/0d1fb5e1ec1c4f4b83da2eb6074fb72c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=vLQMDKpnjabByDyPSdGecNMyfCtDKcTqA7GW3tuWu9Y";
     const LOCATION_TEXT = "Indy Mixing Center";
 
-    /* ==== pointer-event signature pads ==== */
+    /* ==== signature pads ==== */
     function initSignatureCanvas(canvas){
       const ctx = canvas.getContext('2d');
       ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2.0;
@@ -353,10 +356,9 @@
         supSigDate: document.getElementById('supSigDate').value || ""
       };
 
-      // Build print-friendly HTML for Flow; reuse the same inline <img> src (base64)
+      // PDF HTML: use the same internet logo URL
       const check = (b)=> b ? "☑" : "☐";
-      const logoSrc = document.getElementById('brandLogo').src;
-      const logoTag = '<img src="'+logoSrc+'" alt="Campbell’s Snacks" style="height:40px">';
+      const logoTag = '<img src="https://srclm.com/wp-content/uploads/2020/10/CAMPBELL_SNACKS-Logo.png" alt="Campbell’s Snacks" style="height:40px">';
 
       body.html = `
 <!doctype html>
