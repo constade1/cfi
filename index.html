@@ -9,6 +9,8 @@
       --fg:#111; --muted:#4b5563; --border:#cbd5e1; --card:#fff; --bg:#f7f7f8; --accent:#0a66c2;
       --radius:12px; --print-zoom:0.90;
       --success-fg:#165c2f; --success-border:#b7e2c6;
+      /* NEW: control logo height (increase if needed) */
+      --logo-h: 100px;
     }
     @media (prefers-color-scheme: dark){
       :root{ --fg:#eee; --muted:#a3a3a3; --border:#2b2f3a; --card:#12141a; --bg:#0b0c0f; }
@@ -19,9 +21,9 @@
     .page { max-width:900px; margin:20px auto; background:var(--card); border:1px solid var(--border); border-radius: var(--radius); overflow:hidden; }
     .pad { padding:12px 16px; }
 
-    /* Brand + centered title */
-    .brand { text-align:center; padding-top:6px; }
-    .brand img { height:44px; width:auto; display:block; margin:6px auto 4px; }
+    /* Brand + centered title (UPDATED spacing for logo) */
+    .brand { text-align:center; padding:16px 16px 8px; min-height: calc(var(--logo-h) + 40px); }
+    .brand img { max-height: var(--logo-h); width:auto; display:block; margin:8px auto 10px; }
     .brand h1 { text-align:center; font:700 20px/1.15 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif; margin:6px 0 0; }
 
     .row { display:grid; grid-template-columns: 2fr 1.2fr 1fr; gap:12px; align-items:end; }
@@ -107,8 +109,8 @@
 
   <form id="cfi" class="page" novalidate>
     <div class="brand pad">
-      <!-- The script will set this src to a data-URI built from ./logo.png -->
-      <img id="brandLogo" alt="Campbell’s Snacks logo" />
+      <!-- Set a default src so the logo shows immediately; script will upgrade to data-URI -->
+      <img id="brandLogo" src="./logo.png" alt="Campbell’s Snacks logo" />
       <h1>Coaching for Improvement Document</h1>
     </div>
 
@@ -232,7 +234,7 @@
     let LOGO_DATA_URI = "";
     window.addEventListener('load', async () => {
       try {
-        const res = await fetch('./logo.png', { cache: 'no-store' });
+        const res = await fetch(document.getElementById('brandLogo').getAttribute('src') || './logo.png', { cache: 'no-store' });
         if (!res.ok) throw new Error('logo not found');
         const blob = await res.blob();
         LOGO_DATA_URI = await new Promise((resolve, reject) => {
