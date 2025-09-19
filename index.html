@@ -36,7 +36,10 @@
     }
     textarea { min-height:64px; resize:vertical; }
 
-    .readonly-pill { border:1px dashed var(--border); border-radius:10px; padding:8px 9px; font-size:16px; background:#fafafa; }
+    .readonly-pill {
+      border:1px dashed var(--border); border-radius:10px; padding:8px 9px; font-size:16px; background:#fafafa;
+    }
+
     .section-title { font-weight:700; margin:10px 0 6px; }
     .box { border:1px solid var(--border); border-radius:10px; padding:8px; }
 
@@ -75,6 +78,7 @@
       box-shadow:0 10px 30px rgba(0,0,0,.15); animation:pop .28s ease-out;
     }
     @keyframes pop{ from{ transform:scale(.9); opacity:0 } to{ transform:scale(1); opacity:1 } }
+
     .check-wrap{ width:96px; height:96px; margin:6px auto 10px; }
     .check-wrap svg{ width:100%; height:100%; display:block; }
     .draw-circle{ stroke-dasharray: 300; stroke-dashoffset: 300; animation: draw 700ms ease-out forwards; }
@@ -110,7 +114,7 @@
 
   <form id="cfi" class="page" novalidate>
     <div class="brand pad">
-      <!-- Show immediately; JS will also inline it as a data URI for the PDF -->
+      <!-- Shows immediately; no fetch/conversion on load -->
       <img id="brandLogo" src="./logo.png" alt="Campbell’s Snacks logo" height="44">
       <h1>Coaching for Improvement Document</h1>
     </div>
@@ -228,41 +232,31 @@
   </div>
 
   <script>
-    // Your Flow URL:
+    // FLOW URL (from you)
     const FLOW_URL = "https://defaulta0a180f0657a438b891f49417a6dd8.bc.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/0d1fb5e1ec1c4f4b83da2eb6074fb72c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=vLQMDKpnjabByDyPSdGecNMyfCtDKcTqA7GW3tuWu9Y";
 
-    // If the initial relative path fails, retry with computed base path (helps on project pages)
+    // If ./logo.png fails, try a couple of safe fallbacks (no async fetch; won't block page)
     (function(){
       const img = document.getElementById('brandLogo');
       img.addEventListener('error', () => {
-        const base = location.pathname.endsWith('/')
-          ? location.pathname
-          : location.pathname.replace(/\/[^/]*$/, '/');
-        img.src = base + 'logo.png?v=' + Date.now(); // cache-bust
+        // 1) Try same folder computed from current path
+        const base = location.pathname.endsWith('/') ? location.pathname : location.pathname.replace(/\/[^/]*$/, '/');
+        if (!img.dataset.tried1) {
+          img.dataset.tried1 = "1";
+          img.src = base + 'logo.png';
+          return;
+        }
+        // 2) Try root (works if site is at domain root)
+        if (!img.dataset.tried2) {
+          img.dataset.tried2 = "1";
+          img.src = '/logo.png';
+          return;
+        }
+        // Give up silently; alt text will remain
       });
     })();
 
-    // Upgrade the on-page logo to a data URI so the PDF also gets the image reliably
-    let LOGO_DATA_URI = "";
-    window.addEventListener('load', async () => {
-      try {
-        const currentSrc = document.getElementById('brandLogo').getAttribute('src');
-        const res = await fetch(currentSrc, { cache: 'no-store' });
-        if (!res.ok) throw new Error('logo fetch failed');
-        const blob = await res.blob();
-        LOGO_DATA_URI = await new Promise((resolve, reject) => {
-          const r = new FileReader();
-          r.onload = () => resolve(r.result);
-          r.onerror = reject;
-          r.readAsDataURL(blob);
-        });
-        document.getElementById('brandLogo').src = LOGO_DATA_URI;
-      } catch(e) {
-        LOGO_DATA_URI = ""; // fall back to path; PDF will try path too
-      }
-    });
-
-    /* ==== pointer-event signature pads ==== */
+    /* ==== signature pads ==== */
     function initSignatureCanvas(canvas){
       const ctx = canvas.getContext('2d');
       ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2.0;
@@ -342,12 +336,12 @@
     }
     function showOverlay(initialText){
       successMsgEl.textContent = initialText || 'Submitting…';
-      restartCheckAnimation();
+      restartCheckAnimation();          // animated check right away
       overlay.classList.add('show');    // show immediately
     }
     function setOverlayText(t){ successMsgEl.textContent = t; }
     function hideOverlay(){ overlay.classList.remove('show'); }
-    closeBtn.onclick = () => hideOverlay(); // require explicit close
+    closeBtn.onclick = () => hideOverlay();
 
     const form = document.getElementById('cfi');
     const err  = document.getElementById('err');
@@ -358,7 +352,7 @@
       err.style.display='none';
       submitBtn.disabled = true;
 
-      // show overlay + animated check immediately
+      // show overlay immediately
       showOverlay('Submitting…');
 
       storeSigs();
@@ -385,11 +379,9 @@
         supSigDate: document.getElementById('supSigDate').value || ""
       };
 
-      // Build print-friendly HTML for Flow; embed the logo via data URI if available
+      // Minimal HTML for PDF (uses the same relative logo path)
       const check = (b)=> b ? "☑" : "☐";
-      const logoTag = LOGO_DATA_URI
-        ? '<img src="'+LOGO_DATA_URI+'" alt="Campbell’s Snacks" style="height:40px">'
-        : '<img src="./logo.png" alt="Campbell’s Snacks" style="height:40px">';
+      const logoTag = '<img src="./logo.png" alt="Campbell’s Snacks" style="height:40px">';
 
       body.html = `
 <!doctype html>
@@ -460,7 +452,6 @@
         });
         if(!resp.ok) throw new Error(await resp.text());
 
-        // success: update text, clear form; overlay stays until Close is clicked
         setOverlayText('Submitted!');
         clearFormUI();
       }catch(e2){
@@ -476,4 +467,3 @@
   </script>
 </body>
 </html>
-
