@@ -75,7 +75,6 @@
     .check-wrap svg{ width:100%; height:100%; display:block; }
     .draw-circle{ stroke-dasharray: 300; stroke-dashoffset: 300; animation: draw 700ms ease-out forwards; }
     .draw-check{ stroke-dasharray: 100; stroke-dashoffset: 100; animation: draw 500ms ease-out forwards 200ms; }
-    @keyframes draw{ to { stroke-dashoffset: 0; } }
 
     .closebtn{
       margin-top:12px; display:inline-flex; align-items:center; justify-content:center;
@@ -83,15 +82,15 @@
       background:#eff6ff; color:#0b3b85; cursor:pointer;
     }
 
-    /* Stepper */
     .step { display:none; }
     .step.active { display:block; }
     .intro-card { padding:16px; border-top:1px solid var(--border); }
     .viol-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
     @media (max-width:720px){ .viol-grid{ grid-template-columns:1fr; } }
-    .viol-opt { display:flex; align-items:center; gap:10px; border:1px solid var(--border); border-radius:10px; padding:12px; }
+    .viol-opt, .qa-opt { display:flex; align-items:center; gap:10px; border:1px solid var(--border); border-radius:10px; padding:12px; }
+    .qa-group{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin:8px 0; }
+    .muted{ color: var(--muted); font-size: 14px; }
 
-    /* Print */
     @media print{
       body{ background:white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       @page { size: Letter; margin: 0.5in; }
@@ -122,26 +121,50 @@
       <h1>Coaching for Improvement Document</h1>
     </div>
 
-    <!-- Step 1: Select Area(s) of Violation to prefill policy/expectations -->
+    <!-- Step 1 -->
     <section id="step1" class="step active">
       <div class="intro-card pad">
-        <div class="section-title">Start a new coaching form</div>
-        <p style="margin:6px 0 12px;color:var(--muted)">Choose the applicable area(s) of violation. We'll prefill the <b>Policy</b> and <b>Expectations</b> sections. You can still edit them before submitting.</p>
-        <div class="viol-grid" role="group" aria-labelledby="viol-legend">
+        <div class="section-title">Employee/Temp Information</div>
+
+        <div style="margin-top:6px">
+          <label style="font-weight:700">Is this employee a temp?</label>
+          <div class="qa-group" role="radiogroup" aria-label="Is this employee a temp">
+            <label class="qa-opt"><input type="radio" name="isTemp" value="no"> No</label>
+            <label class="qa-opt"><input type="radio" name="isTemp" value="yes"> Yes</label>
+          </div>
+        </div>
+
+        <div id="agencyWrap" style="display:none; margin-top:6px">
+          <label style="font-weight:700">Select the Agency:</label>
+          <div class="qa-group" role="radiogroup" aria-label="Temp agency">
+            <label class="qa-opt"><input type="radio" name="tempAgency" value="Aerotek"> Aerotek</label>
+            <label class="qa-opt"><input type="radio" name="tempAgency" value="Randstad"> Randstad</label>
+            <label class="qa-opt"><input type="radio" name="tempAgency" value="Manpower"> Manpower</label>
+            <label class="qa-opt"><input type="radio" name="tempAgency" value="Other"> Other</label>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border); margin:12px 0">
+
+        <p class="muted" style="margin:6px 0 10px">Choose the applicable area(s) of violation. We'll prefill the <b>Policy</b> and <b>Expectations</b> sections. You can still edit them before submitting.</p>
+        <div class="viol-grid" role="group">
           <div class="viol-opt"><label><input type="checkbox" id="s1_conduct"> Conduct</label></div>
           <div class="viol-opt"><label><input type="checkbox" id="s1_performance"> Performance</label></div>
           <div class="viol-opt"><label><input type="checkbox" id="s1_quality"> Quality</label></div>
           <div class="viol-opt"><label><input type="checkbox" id="s1_safety"> Safety</label></div>
         </div>
+
         <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px">
           <button type="button" id="startFormBtn" class="primary">Continue to form</button>
         </div>
       </div>
     </section>
 
-    <!-- Step 2: Main form -->
+    <!-- Step 2 -->
     <section id="step2" class="step">
       <div class="pad">
+
+        <!-- FIRST: Name / Location / Date -->
         <div class="row">
           <div>
             <label>Employee Name</label>
@@ -155,6 +178,19 @@
             <label>Date</label>
             <input type="text" id="date" name="date" class="pill-input" readonly aria-readonly="true" />
           </div>
+        </div>
+
+        <!-- THEN: Temp Status / Agency -->
+        <div class="row" style="margin-top:4px">
+          <div>
+            <label>Temp Status</label>
+            <div class="readonly-pill" id="tempStatusView">—</div>
+          </div>
+          <div>
+            <label>Agency</label>
+            <div class="readonly-pill" id="tempAgencyView">—</div>
+          </div>
+          <div></div>
         </div>
 
         <div class="section-title" style="margin-top:8px">Incident Description</div>
@@ -258,49 +294,54 @@
   <script>
     const FLOW_URL = "https://defaulta0a180f0657a438b891f49417a6dd8.bc.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/0d1fb5e1ec1c4f4b83da2eb6074fb72c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=vLQMDKpnjabByDyPSdGecNMyfCtDKcTqA7GW3tuWu9Y";
 
-    // ======= Prefill templates (edit to your site's exact language) =======
     const TEMPLATES = {
       conduct: {
-        policy: `In accordance with Logistics Corrective Action Guidelines, this coaching falls under the Conduct category.` ,
+        policy: `In accordance with Logistics Corrective Action Guidelines, this coaching falls under the Conduct category.`,
         expectations: `Demonstrate professional, respectful conduct at all times. Follow leader direction, use appropriate language, and escalate concerns through the correct channels. Future incidents may lead to further coaching and/or corrective action.`
       },
       performance: {
-        policy: `In accordance with Logistics Corrective Action Guidelines, this coaching falls under the Performance category and is guided by the Warehouse Labor Management Policy.` ,
+        policy: `In accordance with Logistics Corrective Action Guidelines, this coaching falls under the Performance category and is guided by the Warehouse Labor Management Policy.`,
         expectations: `Meet or exceed performance standards. Ask for clarification when unsure, request help early, and use available tools/training. Sustain improvement on upcoming shifts.`
       },
       quality: {
-        policy: `In accordance with Logistics Corrective Action Guidelines, this coaching falls under the Quality category.` ,
+        policy: `In accordance with Logistics Corrective Action Guidelines, this coaching falls under the Quality category.`,
         expectations: `Follow all quality checks and documentation. Verify counts before moves, correct errors immediately, and report issues to a lead or supervisor.`
       },
       safety: {
-        policy: `In accordance with Logistics Corrective Action Guidelines, this coaching falls under the Safety category.` ,
+        policy: `In accordance with Logistics Corrective Action Guidelines, this coaching falls under the Safety category.`,
         expectations: `Work safely without shortcuts. Wear PPE, maintain safe speeds, perform required checks, and stop/ask if conditions are unsafe. Report hazards immediately.`
       }
     };
 
-    // ======= Step handling =======
     const step1 = document.getElementById('step1');
     const step2 = document.getElementById('step2');
     const startFormBtn = document.getElementById('startFormBtn');
     const backBtn = document.getElementById('backBtn');
 
+    const isTempRadios = Array.from(document.querySelectorAll('input[name="isTemp"]'));
+    const agencyWrap = document.getElementById('agencyWrap');
 
-// Fill today's date (YYYY-MM-DD) into all date fields
-function fillTodayDates() {
-  const d = new Date();
-  const iso = d.toLocaleDateString(undefined, { year: "numeric", month: "2-digit", day: "2-digit" });
-  ["date", "empSigDate", "supSigDate"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = iso;
-  });
-}
+    isTempRadios.forEach(r => {
+      r.addEventListener('change', () => {
+        if (r.value === 'yes' && r.checked) {
+          agencyWrap.style.display = 'block';
+        } else if (r.value === 'no' && r.checked) {
+          agencyWrap.style.display = 'none';
+          document.querySelectorAll('input[name="tempAgency"]').forEach(a => a.checked = false);
+        }
+      });
+    });
 
-// Run once when the DOM is ready
-document.addEventListener("DOMContentLoaded", fillTodayDates);
-
-// Also run when continuing to the form (safe even if button isn't on the page yet)
-document.getElementById("startFormBtn")?.addEventListener("click", fillTodayDates);
-
+    function fillTodayDates() {
+      const d = new Date();
+      const iso = d.toLocaleDateString(undefined, { year: "numeric", month: "2-digit", day: "2-digit" });
+      ["date", "empSigDate", "supSigDate"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = iso;
+      });
+    }
+    document.addEventListener("DOMContentLoaded", fillTodayDates);
+    document.getElementById("startFormBtn")?.addEventListener("click", fillTodayDates);
 
     function gotoStep(n){
       step1.classList.toggle('active', n===1);
@@ -309,34 +350,44 @@ document.getElementById("startFormBtn")?.addEventListener("click", fillTodayDate
     }
 
     startFormBtn.addEventListener('click', () => {
-      // Collect selected areas (multiple allowed)
+      const chosenTemp = isTempRadios.find(r => r.checked)?.value || "";
+      if (!chosenTemp) { alert("Please answer: Is this employee a temp?"); return; }
+
+      let chosenAgency = "";
+      if (chosenTemp === "yes") {
+        const a = document.querySelector('input[name="tempAgency"]:checked');
+        if (!a) { alert("Please select the temp agency."); return; }
+        chosenAgency = a.value;
+      }
+
+      document.getElementById('tempStatusView').textContent = chosenTemp === "yes" ? "Yes" : "No";
+      document.getElementById('tempAgencyView').textContent = chosenTemp === "yes" ? chosenAgency : "—";
+
       const sel = {
         conduct: document.getElementById('s1_conduct').checked,
         performance: document.getElementById('s1_performance').checked,
         quality: document.getElementById('s1_quality').checked,
         safety: document.getElementById('s1_safety').checked
       };
-      // Reflect into the form checkboxes
       document.getElementById('viol_conduct').checked = sel.conduct;
       document.getElementById('viol_performance').checked = sel.performance;
       document.getElementById('viol_quality').checked = sel.quality;
       document.getElementById('viol_safety').checked = sel.safety;
 
-      // Build prefill text (concatenate chosen templates)
       const chosenKeys = Object.keys(sel).filter(k => sel[k]);
       const prePolicy = chosenKeys.map(k => `• ${TEMPLATES[k].policy}`).join('\n');
       const preExpect = chosenKeys.map(k => `• ${TEMPLATES[k].expectations}`).join('\n');
-
-      // Prefill (still editable)
       document.getElementById('policy').value = prePolicy;
       document.getElementById('expectations').value = preExpect;
+
+      form.dataset.isTemp = chosenTemp;
+      form.dataset.tempAgency = chosenTemp === "yes" ? chosenAgency : "";
 
       gotoStep(2);
     });
 
     backBtn.addEventListener('click', ()=> gotoStep(1));
 
-    /* ==== signature pads ==== */
     function initSignatureCanvas(canvas){
       const ctx = canvas.getContext('2d');
       ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2.0;
@@ -401,10 +452,14 @@ document.getElementById("startFormBtn")?.addEventListener("click", fillTodayDate
       empPad.clear(); supPad.clear();
       document.getElementById('sigEmpData').value = '';
       document.getElementById('sigSupData').value = '';
+      isTempRadios.forEach(r=> r.checked=false);
+      document.querySelectorAll('input[name="tempAgency"]').forEach(a => a.checked=false);
+      document.getElementById('tempStatusView').textContent='—';
+      document.getElementById('tempAgencyView').textContent='—';
+      agencyWrap.style.display='none';
       gotoStep(1);
     }
 
-    // Success overlay control
     const overlay = document.getElementById('successOverlay');
     const successMsgEl = document.getElementById('successMsg');
     const closeBtn = document.getElementById('closeOverlay');
@@ -428,7 +483,6 @@ document.getElementById("startFormBtn")?.addEventListener("click", fillTodayDate
     const err  = document.getElementById('err');
     const submitBtn = document.getElementById('submitBtn');
 
-    // ======= Autofill: Employee Name -> Employee Typed Name (opt-out if edited) =======
     const empNameEl = document.getElementById('empName');
     const empSigNameEl = document.getElementById('empSigName');
     let sigManuallyEdited = false;
@@ -437,7 +491,6 @@ document.getElementById("startFormBtn")?.addEventListener("click", fillTodayDate
       if (!sigManuallyEdited) empSigNameEl.value = empNameEl.value;
     });
 
-    // ======= Submit =======
     form.addEventListener('submit', async (e)=>{
       e.preventDefault();
       err.style.display='none';
@@ -447,10 +500,15 @@ document.getElementById("startFormBtn")?.addEventListener("click", fillTodayDate
 
       storeSigs();
 
+      const isTemp = (form.dataset.isTemp || "").toLowerCase();
+      const tempAgency = form.dataset.tempAgency || "";
+
       const body = {
         employeeName: document.getElementById('empName').value || "",
         date: document.getElementById('date').value || "",
         location: "Indy Mixing Center",
+        isTemp: isTemp === "yes",
+        tempAgency: isTemp === "yes" ? tempAgency : "",
         incident: document.getElementById('incident').value || "",
         policy: document.getElementById('policy').value || "",
         expectations: document.getElementById('expectations').value || "",
@@ -469,7 +527,6 @@ document.getElementById("startFormBtn")?.addEventListener("click", fillTodayDate
         supSigDate: document.getElementById('supSigDate').value || ""
       };
 
-      // PDF HTML uses the same wordmark text (no external images)
       const check = (b)=> b ? "☑" : "☐";
       const wordmark = '<div style="text-align:center;font-weight:900;font-size:18px"><span style="color:#BA0018">Campbell&#39;s</span> <span style="color:#FFAD00">Snacks</span></div>';
 
@@ -494,6 +551,12 @@ document.getElementById("startFormBtn")?.addEventListener("click", fillTodayDate
     <div class="row"><span class="label">Employee Name:</span> ${esc(body.employeeName)}</div>
     <div class="row"><span class="label">Location:</span> ${esc(body.location)}</div>
     <div class="row"><span class="label">Date:</span> ${esc(body.date)}</div>
+  </div>
+
+  <div class="grid3" style="margin-top:4px">
+    <div class="row"><span class="label">Is Temp:</span> ${body.isTemp ? 'Yes' : 'No'}</div>
+    ${body.isTemp ? `<div class="row"><span class="label">Temp Agency:</span> ${esc(body.tempAgency)}</div>` : `<div class="row"></div>`}
+    <div class="row"></div>
   </div>
 
   <div class="row" style="margin-top:6px"><b>Incident Description</b></div>
